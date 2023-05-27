@@ -1,0 +1,6 @@
+*.cmx
+*.cmi
+*.o
+.depend
+langford-pairing
+test
