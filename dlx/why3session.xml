@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE why3session PUBLIC "-//Why3//proof session v5//EN"
+"http://why3.lri.fr/why3session.dtd">
+<why3session shape_version="6">
+<file format="whyml">
+<path name=".."/><path name="dlx.mlw"/>
+<theory name="ArrayFoldLeft">
+ <goal name="fold_left&#39;vc" expl="VC for fold_left">
+ </goal>
+</theory>
+<theory name="DLX">
+ <goal name="create&#39;vc" expl="VC for create">
+ </goal>
+ <goal name="top&#39;vc" expl="VC for top">
+ </goal>
+ <goal name="len&#39;vc" expl="VC for len">
+ </goal>
+ <goal name="ulink&#39;vc" expl="VC for ulink">
+ </goal>
+ <goal name="dlink&#39;vc" expl="VC for dlink">
+ </goal>
+ <goal name="llink&#39;vc" expl="VC for llink">
+ </goal>
+ <goal name="rlink&#39;vc" expl="VC for rlink">
+ </goal>
+ <goal name="hide&#39;vc" expl="VC for hide">
+ </goal>
+ <goal name="cover&#39;vc" expl="VC for cover">
+ </goal>
+ <goal name="unhide&#39;vc" expl="VC for unhide">
+ </goal>
+ <goal name="uncover&#39;vc" expl="VC for uncover">
+ </goal>
+ <goal name="choose&#39;vc" expl="VC for choose">
+ </goal>
+ <goal name="step&#39;vc" expl="VC for step">
+ </goal>
+ <goal name="explore&#39;vc" expl="VC for explore">
+ </goal>
+ <goal name="search&#39;vc" expl="VC for search">
+ </goal>
+</theory>
+</file>
+</why3session>

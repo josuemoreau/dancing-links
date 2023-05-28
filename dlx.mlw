@@ -1,0 +1,251 @@
+
+
+(* exception InitError
+   exception WrongTop
+   exception WrongLen *)
+
+(* module EMap
+
+     use int.Int
+
+     clone export MapImp
+        with type key = int,
+              val eq = Int.(=),
+            axiom .
+
+   end
+
+   module DLXElement
+     type t
+     val compare : t -> t -> int
+   end *)
+
+module ArrayFoldLeft
+
+  use array.Array
+  use ref.Ref
+  use int.Int
+
+  let fold_left (f: 'b -> 'a -> 'b) (acc: 'b) (a: array 'a) : 'b
+  = let ref x = acc in
+    for i = 0 to length a - 1 do
+      x <- f x a[i]
+    done;
+    x
+end
+
+module DLX
+
+  use array.Array
+  use array.Init
+  use ArrayFoldLeft
+  use list.List
+  use list.Length as LLength
+  use int.Int
+  use int.ComputerDivision
+  use fmap.MapAppInt as Map
+  use ref.Ref
+  use ocaml.Exceptions
+
+  type node_type =
+    | NotInitialized
+    | Header
+    | Option
+    | Spacer
+
+  type items = {
+    obj: array int;
+    left: array int;
+    right: array int;
+  }
+
+  type options = {
+    nt: array node_type;
+    tl: array int;
+    up: array int;
+    down: array int
+  }
+
+  type elt
+  type t = {
+    items:      items;
+    options:    options;
+    rows:       array (list int);
+    corresp:    Map.t int;
+    rcorresp:   array (list int);
+    nb_options: int;
+    nb_items:   int;
+    mutable nb_solutions: int
+  }
+
+  let create (items: array int) (rows: array (list int)) : t
+  = let nb_items = length items in
+    let obj'   = init (nb_items + 1) (pure { fun i -> if i = 0 then -1 else items[i - 1] }) in
+    let left'  = init (nb_items + 1) (fun i -> if i = 0 then nb_items else i - 1) in
+    let right' = init (nb_items + 1) (fun i -> mod (i + 1) (nb_items + 1)) in
+    let nb_options = fold_left (fun n r ->
+                        n + LLength.length r + 1
+                      ) (nb_items + 2) rows in
+    let nt'   = make nb_options NotInitialized in
+    let tl'   = make nb_options   0  in
+    let up'   = make nb_options (-1) in
+    let down' = make nb_options (-1) in
+    let items'  = { obj = empty (); left = empty (); right = empty () } in
+    let options = { nt = nt'; tl = tl'; up = up'; down = down' } in
+    let ref corresp = Map.create () in
+    for i = 0 to length items - 1 do
+      options.up[i]   <- i;
+      options.down[i] <- i;
+      corresp <- Map.add items[i] i corresp
+    done;
+    let rcorresp = make nb_options (Nil: list int) in
+    let ref i = nb_items + 1 in
+    for l = 0 to length rows do
+      let j = i in
+      options.nt[i] <- Spacer;
+      let rec loop_row r =
+        match r with
+        | Nil -> ()
+        | Cons e r ->
+          i <- i + 1;
+          rcorresp[i] <- r;
+          match Map.find e corresp with
+          | k ->
+            options.nt[i] <- Option;
+            options.tl[i] <- k;
+            options.up[i] <- options.up[k];
+            options.down[i] <- k;
+            options.down[options.up[k]] <- i;
+            options.tl[k] <- options.tl[k] + 1;
+            options.up[k] <- i;
+            match options.nt[k] with
+            | NotInitialized ->
+              options.down[k] <- i;
+              options.nt[k] <- Header
+            | _ -> ()
+            end
+          | exception Not_found -> absurd
+          end
+        end in
+      loop_row rows[i];
+      i <- i + 1;
+      options.nt[i] <- Option;
+      options.tl[i] <- -(l + 1);
+      options.up[i] <- j + 1;
+      options.down[i] <- i - 1;
+      options.down[j] <- i - 1
+    done;
+    options.down[nb_options - 1] <- -1;
+    { items = items';
+      options = options;
+      rows = rows;
+      corresp = corresp;
+      rcorresp = rcorresp;
+      nb_options = nb_options;
+      nb_items = nb_items;
+      nb_solutions = 0 }
+
+  let top (t: t) (i: int) =
+    match t.options.nt[i] with
+    | Option | Spacer -> t.options.tl[i]
+    | _ -> absurd
+    end
+  let len (t: t) (i: int) =
+    match t.options.nt[i] with
+    | Header -> t.options.tl[i]
+    | _ -> absurd
+    end
+  let ulink t i = t.options.up[i]
+  let dlink t i = t.options.down[i]
+  let llink t i = t.items.left[i]
+  let rlink t i = t.items.right[i]
+
+  let hide (t: t) (p: int)
+  = let ref q = p + 1 in
+    while q <> p do
+      let x = top t q in
+      let u = ulink t q in
+      let d = dlink t q in
+      if x <= 0 then q <- u
+      else (t.options.down[u] <- d;
+            t.options.up[d]   <- u;
+            t.options.tl[x]   <- len t x - 1;
+            q <- q + 1)
+    done
+
+  let cover t i =
+    let ref p = dlink t i in
+    while p <> i do
+      hide t p;
+      p <- dlink t p
+    done;
+    let l = llink t i in
+    let r = rlink t i in
+    t.items.right[l] <- r;
+    t.items.left[r]  <- l
+
+  let unhide t p =
+    let ref q = p - 1 in
+    while q <> p do
+      let x = top t q in
+      let u = ulink t q in
+      let d = dlink t q in
+      if x <= 0 then q <- d
+      else (t.options.down[u] <- q;
+            t.options.up[d]   <- q;
+            t.options.tl[x]   <- len t x + 1;
+            q <- q - 1)
+    done
+
+  let uncover t i =
+    let l = llink t i in
+    let r = rlink t i in
+    t.items.right[l] <- i;
+    t.items.left[r]  <- i;
+    let ref p = ulink t i in
+    while p <> i do
+      unhide t p;
+      p <- ulink t p
+    done
+
+  let choose t =
+    let ref m = rlink t 0 in
+    let ref p = rlink t m in
+    while p <> 0 do
+      if len t p < len t m then m <- p;
+      p <- rlink t p
+    done;
+    m
+
+  let rec step t x l =
+    if rlink t 0 = 0 then begin
+      (* A solution have been found ! *)
+      t.nb_solutions <- t.nb_solutions + 1
+    end else begin
+      let i = choose t in
+      cover t i;
+      explore t i (dlink t i) x l;
+      uncover t i;
+    end
+  with explore t i xl x l =
+    if xl = i then ()
+    else begin
+      let ref p = xl + 1 in
+      while p <> xl do
+        let j = top t p in
+        if j <= 0 then p <- ulink t p
+        else (cover t j; p <- p + 1)
+      done;
+      step t (Cons xl x) (l + 1);
+      let ref p = xl - 1 in
+      while p <> xl do
+        let j = top t p in
+        if j <= 0 then p <- dlink t p
+        else (uncover t j; p <- p - 1)
+      done;
+      explore t i (dlink t xl) x l
+    end
+
+  let search t = step t Nil 0
+
+end
