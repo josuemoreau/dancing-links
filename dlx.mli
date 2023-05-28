@@ -7,8 +7,6 @@ module type DLXElement = sig
 end
 
 exception InitError
-exception WrongTop of int
-exception WrongLen of int
 
 module type S = sig
   type elt
