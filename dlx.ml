@@ -31,7 +31,7 @@ module type S = sig
 
   val debug: bool ref
 
-  val create: elt array -> elt array array -> t
+  val create: elt array -> elt list array -> t
 
   val pp_table: Format.formatter -> t -> unit
 
@@ -44,9 +44,9 @@ module DLX (E : DLXElement) = struct
   type t = {
       items:      elt item array;
       options:    node array;
-      rows:       elt array array;
+      rows:       elt list array;
       corresp:    int EMap.t;
-      rcorresp:   elt array array;
+      rcorresp:   elt list array;
       nb_options: int;
       nb_items:   int;
       mutable nb_solutions: int
@@ -54,7 +54,7 @@ module DLX (E : DLXElement) = struct
 
   let debug = ref false
 
-  let create (items: elt array) (rows: elt array array) : t =
+  let create (items: elt array) (rows: elt list array) : t =
     let nb_items = Array.length items in
     let items' = Array.init (nb_items + 1) (fun i ->
                               if i = 0 then
@@ -63,7 +63,7 @@ module DLX (E : DLXElement) = struct
                                 { obj = items.(i - 1);
                                   left = i - 1; right = (i + 1) mod (nb_items + 1) }) in
     let nb_options = Array.fold_left (fun n r ->
-                              n + Array.length r + 1
+                              n + List.length r + 1
                             ) (nb_items + 2) rows in
     let options = Array.init nb_options (fun _ -> { t  = NotInitialized;
                                                     tl = 0; up   = -1; down = -1 }) in
@@ -74,13 +74,13 @@ module DLX (E : DLXElement) = struct
                       options.(!i).up   <- !i;
                       options.(!i).down <- !i;
                       EMap.add e !i c) EMap.empty items in
-    let rcorresp = Array.make nb_options [||] in
+    let rcorresp = Array.make nb_options [] in
     incr i;
     assert (!i = nb_items + 1);
     Array.iteri (fun l r ->
         let j = !i in
         options.(j).t <- Spacer;
-        Array.iter (fun e ->
+        List.iter (fun e ->
             incr i;
             (* Format.printf "%d : " !i; *)
             rcorresp.(!i) <- r;
@@ -209,7 +209,7 @@ module DLX (E : DLXElement) = struct
     while !p <> i do unhide t !p; p := ulink t !p done
 
   let pp_row p r =
-    Array.iter (Format.fprintf p "%a " E.pp) r
+    List.iter (Format.fprintf p "%a " E.pp) r
 
   let rec pp_solution p (t, x) =
     match x with

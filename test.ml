@@ -5,12 +5,12 @@ let test_items =
 
 let test_rows =
   [|
-    [| "c"; "e" |];
-    [| "a"; "d"; "g" |];
-    [| "b"; "c"; "f" |];
-    [| "a"; "d"; "f" |];
-    [| "b"; "g" |];
-    [| "d"; "e"; "g" |]
+    [ "c"; "e" ];
+    [ "a"; "d"; "g" ];
+    [ "b"; "c"; "f" ];
+    [ "a"; "d"; "f" ];
+    [ "b"; "g" ];
+    [ "d"; "e"; "g" ]
   |]
 
 module StringElt : DLXElement with type t = string = struct

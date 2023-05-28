@@ -12,9 +12,9 @@ let langford_pairs_options n =
     for j = 1 to 2 * n do
       for k = 1 to 2 * n do
         if k = i + j + 1 then
-          options := [|string_of_int i;
+          options := [ string_of_int i;
                        "s" ^ string_of_int j;
-                       "s" ^ string_of_int k|] :: !options
+                       "s" ^ string_of_int k ] :: !options
       done
     done
   done;
@@ -31,6 +31,8 @@ end
 module X = DLX(StringElt)
 
 let () =
+  if Array.length Sys.argv < 2 then
+    (Format.printf "The first argument was not specified.@."; exit 1);
   let n = int_of_string (Sys.argv.(1)) in
   let items   = langford_pairs_items n in
   let options = langford_pairs_options n in

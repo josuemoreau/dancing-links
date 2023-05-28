@@ -14,7 +14,7 @@ module type S = sig
 
   val debug: bool ref
 
-  val create: elt array -> elt array array -> t
+  val create: elt array -> elt list array -> t
 
   val pp_table: Format.formatter -> t -> unit
 
