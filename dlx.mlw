@@ -1,25 +1,3 @@
-
-
-(* exception InitError
-   exception WrongTop
-   exception WrongLen *)
-
-(* module EMap
-
-     use int.Int
-
-     clone export MapImp
-        with type key = int,
-              val eq = Int.(=),
-            axiom .
-
-   end
-
-   module DLXElement
-     type t
-     val compare : t -> t -> int
-   end *)
-
 module ArrayFoldLeft
 
   use array.Array
@@ -43,7 +21,7 @@ module DLX
   use list.Length as LLength
   use int.Int
   use int.ComputerDivision
-  use fmap.MapAppInt as Map
+  use fmap.MapImp
   use ref.Ref
   use ocaml.Exceptions
 
@@ -53,8 +31,8 @@ module DLX
     | Option
     | Spacer
 
-  type items = {
-    obj: array int;
+  type items 'a = {
+    obj: array 'a;
     left: array int;
     right: array int;
   }
@@ -66,21 +44,32 @@ module DLX
     down: array int
   }
 
-  type elt
+  scope Make
+    scope DLXElement
+      type t
+      val null : t
+      val eq (x y: t) : bool
+        ensures { result <-> x = y }
+    end
+
+  type elt = DLXElement.t
+
+  clone fmap.MapImp as EMap with type key = elt, val eq = DLXElement.eq, axiom .
+
   type t = {
-    items:      items;
+    items:      items elt;
     options:    options;
-    rows:       array (list int);
-    corresp:    Map.t int;
-    rcorresp:   array (list int);
+    rows:       array (list elt);
+    corresp:    EMap.t int;
+    rcorresp:   array (list elt);
     nb_options: int;
     nb_items:   int;
     mutable nb_solutions: int
   }
 
-  let create (items: array int) (rows: array (list int)) : t
+  let create (items: array elt) (rows: array (list elt)) : t
   = let nb_items = length items in
-    let obj'   = init (nb_items + 1) (pure { fun i -> if i = 0 then -1 else items[i - 1] }) in
+    let obj'   = init (nb_items + 1) (pure { fun i -> if i = 0 then DLXElement.null else items[i - 1] }) in
     let left'  = init (nb_items + 1) (fun i -> if i = 0 then nb_items else i - 1) in
     let right' = init (nb_items + 1) (fun i -> mod (i + 1) (nb_items + 1)) in
     let nb_options = fold_left (fun n r ->
@@ -92,24 +81,24 @@ module DLX
     let down' = make nb_options (-1) in
     let items'  = { obj = empty (); left = empty (); right = empty () } in
     let options = { nt = nt'; tl = tl'; up = up'; down = down' } in
-    let ref corresp = Map.create () in
+    let corresp = EMap.create () in
     for i = 0 to length items - 1 do
       options.up[i]   <- i;
       options.down[i] <- i;
-      corresp <- Map.add items[i] i corresp
+      EMap.add items[i] i corresp
     done;
-    let rcorresp = make nb_options (Nil: list int) in
+    let rcorresp = make nb_options (Nil: list elt) in
     let ref i = nb_items + 1 in
     for l = 0 to length rows do
       let j = i in
       options.nt[i] <- Spacer;
-      let rec loop_row r =
+      let rec loop_row (r: list elt) =
         match r with
         | Nil -> ()
         | Cons e r ->
           i <- i + 1;
           rcorresp[i] <- r;
-          match Map.find e corresp with
+          match EMap.find e corresp with
           | k ->
             options.nt[i] <- Option;
             options.tl[i] <- k;
@@ -247,5 +236,7 @@ module DLX
     end
 
   let search t = step t Nil 0
+
+  end
 
 end
