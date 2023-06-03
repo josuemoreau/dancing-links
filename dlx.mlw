@@ -80,7 +80,10 @@ module DLXSpec
 
   let create (items: array elt) (rows: array (list elt)) : t
   = let nb_items = length items in
-    let obj'   = init (nb_items + 1) (pure { fun i -> if i = 0 then DLXElement.null else items[i - 1] }) in
+    let obj'   = make (nb_items + 1) DLXElement.null in
+    for i = 1 to nb_items do
+      obj'[i] <- items[i - 1]
+    done;
     let left'  = init (nb_items + 1) (fun i -> if i = 0 then nb_items else i - 1) in
     let right' = init (nb_items + 1) (fun i -> mod (i + 1) (nb_items + 1)) in
     let nb_options = fold_left (fun n r ->
@@ -90,7 +93,7 @@ module DLXSpec
     let tl'   = make nb_options   0  in
     let up'   = make nb_options (-1) in
     let down' = make nb_options (-1) in
-    let items'  = { obj = empty (); left = empty (); right = empty () } in
+    let items'  = { obj = obj'; left = left'; right = right' } in
     let options = { nt = nt'; tl = tl'; up = up'; down = down' } in
     let corresp = EMap.create () in
     for i = 0 to length items - 1 do
