@@ -55,7 +55,7 @@ module DLXSpec
     down: array int
   }
 
-  scope Make
+  scope MakeSpec
     scope DLXElement
       type t
       val null : t
@@ -63,20 +63,91 @@ module DLXSpec
         ensures { result <-> x = y }
     end
 
-  type elt = DLXElement.t
+    type elt = DLXElement.t
 
-  clone fmap.MapImp as EMap with type key = elt, val eq = DLXElement.eq, axiom .
+    clone fmap.MapImp as EMap with type key = elt, val eq = DLXElement.eq, axiom .
 
-  type t = {
-    items:      items elt;
-    options:    options;
-    rows:       array (list elt);
-    corresp:    EMap.t int;
-    rcorresp:   array (list elt);
-    nb_options: int;
-    nb_items:   int;
-    mutable nb_solutions: int
-  }
+    predicate items_left_right (it: items 'a) =
+      forall i.
+        0 <= i < length it.left ->
+        it.left[it.right[i]] = i /\
+        it.right[it.left[i]] = i
+
+    predicate options_nt (n: int) (opts: options) =
+      opts.nt[0] = NotInitialized /\
+      opts.nt[n + 1] = Spacer /\
+      forall i.
+        0 < i < length opts.nt ->
+        i <> n + 1 ->
+        if i <= n then opts.nt[i] = Header
+        else opts.nt[i] = Option \/ opts.nt[i] = Spacer
+
+    predicate options_top (n: int) (opts: options) =
+      forall i.
+        n < i < length opts.nt ->
+        opts.nt[i] = Option ->
+        1 <= opts.tl[i] <= n /\ opts.nt[i] = Header
+
+    predicate options_up_down (opts: options) =
+      forall i.
+        0 <= i < length opts.up ->
+        opts.nt[i] <> NotInitialized ->
+        opts.nt[i] <> Spacer ->
+        opts.up[opts.down[i]] = i /\
+        opts.down[opts.up[i]] = i
+
+    type t = {
+      items:      items elt;
+      options:    options;
+      rows:       array (list elt);
+      corresp:    EMap.t int;
+      rcorresp:   array (list elt);
+      nb_options: int;
+      nb_items:   int;
+      mutable nb_solutions: int
+    }
+      invariant { nb_items = length items.obj
+                           = length items.left = length items.right }
+      invariant { nb_options = length options.nt = length options.tl
+                             = length options.up = length options.down }
+      invariant { items_left_right items }
+      invariant { options_nt  nb_items options }
+      invariant { options_top nb_items options }
+      invariant { options_up_down options }
+      by {
+        items = { obj = empty (); left = empty (); right = empty () };
+        options = { nt = (make 2 NotInitialized)[1 <- Spacer];
+                    tl = make 2 0; up = make 2 0; down = make 2 0 };
+        rows = empty ();
+        corresp = EMap.create ();
+        rcorresp = empty ();
+        nb_options = 2;
+        nb_items = 0;
+        nb_solutions = 0
+      }
+
+
+
+  end
+
+end
+
+module DLX
+
+  use array.Array
+  use array.Init
+  use ArrayFoldLeft
+  use list.List
+  use list.Length as LLength
+  use int.Int
+  use int.ComputerDivision
+  use fmap.MapImp
+  use ref.Ref
+  use ocaml.Exceptions
+
+  use DLXSpec
+
+  scope Make import MakeSpec
 
   let create (items: array elt) (rows: array (list elt)) : t
   = let nb_items = length items in
