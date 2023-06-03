@@ -4,26 +4,37 @@ module ArrayFoldLeft
   use ref.Ref
   use int.Int
 
+  let rec function fold_left' (f: 'b -> 'a -> 'b) (acc: 'b) (a: array 'a) (l h: int) : 'b
+    requires { 0 <= l <= h <= length a }
+    variant  { h - l }
+  = if l = h then acc
+    else fold_left' f (f acc a[l]) a (l + 1) h
+
+  let rec lemma fold_left'_incr_h (f: 'b -> 'a -> 'b) (acc: 'b) (a: array 'a) (l h: int)
+    requires { 0 <= l <= h < length a }
+    ensures  { fold_left' f acc a l (h + 1) = f (fold_left' f acc a l h) a[h] }
+    variant  { h - l }
+  = if l = h then ()
+    else fold_left'_incr_h f (f acc a[l]) a (l + 1) h
+
   let fold_left (f: 'b -> 'a -> 'b) (acc: 'b) (a: array 'a) : 'b
+    ensures { result = fold_left' f acc a 0 (length a) }
   = let ref x = acc in
     for i = 0 to length a - 1 do
+      invariant { x = fold_left' f acc a 0 i }
       x <- f x a[i]
     done;
     x
 end
 
-module DLX
+module DLXSpec
 
   use array.Array
   use array.Init
-  use ArrayFoldLeft
   use list.List
-  use list.Length as LLength
   use int.Int
-  use int.ComputerDivision
   use fmap.MapImp
-  use ref.Ref
-  use ocaml.Exceptions
+  use int.EuclideanDivision
 
   type node_type =
     | NotInitialized
