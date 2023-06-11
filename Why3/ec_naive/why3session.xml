@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE why3session PUBLIC "-//Why3//proof session v5//EN"
+"http://why3.lri.fr/why3session.dtd">
+<why3session shape_version="6">
+<prover id="0" name="CVC4" version="1.8" timelimit="1" steplimit="0" memlimit="1000"/>
+<file format="whyml" proved="true">
+<path name=".."/><path name="ec_naive.mlw"/>
+<theory name="ExactCover" proved="true">
+ <goal name="add_line&#39;vc" expl="VC for add_line" proved="true">
+ <transf name="split_vc" proved="true" >
+  <goal name="add_line&#39;vc.0" expl="index in matrix bounds" proved="true">
+  <proof prover="0"><result status="valid" time="0.05" steps="13314"/></proof>
+  </goal>
+  <goal name="add_line&#39;vc.1" expl="variant decrease" proved="true">
+  <proof prover="0"><result status="valid" time="0.05" steps="12113"/></proof>
+  </goal>
+  <goal name="add_line&#39;vc.2" expl="precondition" proved="true">
+  <proof prover="0"><result status="valid" time="0.03" steps="12102"/></proof>
+  </goal>
+  <goal name="add_line&#39;vc.3" expl="precondition" proved="true">
+  <proof prover="0"><result status="valid" time="0.03" steps="12371"/></proof>
+  </goal>
+  <goal name="add_line&#39;vc.4" expl="precondition" proved="true">
+  <proof prover="0"><result status="valid" time="0.04" steps="13041"/></proof>
+  </goal>
+  <goal name="add_line&#39;vc.5" expl="postcondition" proved="true">
+  <proof prover="0"><result status="valid" time="0.04" steps="15286"/></proof>
+  </goal>
+  <goal name="add_line&#39;vc.6" expl="postcondition" proved="true">
+  <proof prover="0"><result status="valid" time="0.04" steps="18398"/></proof>
+  </goal>
+ </transf>
+ </goal>
+</theory>
+<theory name="ExactCoverSolve" proved="true">
+ <goal name="t&#39;vc" expl="VC for t" proved="true">
+ <proof prover="0"><result status="valid" time="0.03" steps="6037"/></proof>
+ </goal>
+</theory>
+</file>
+</why3session>

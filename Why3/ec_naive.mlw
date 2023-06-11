@@ -1,0 +1,75 @@
+module ExactCover
+  use int.Int
+  use seq.Seq as S
+  use list.List
+  use matrix.Matrix
+
+  let rec function add_line (m: matrix int) (l ncols: int) (s: S.seq int) : S.seq int
+    requires { 0 <= l < m.rows }
+    requires { 0 <= ncols <= m.columns = S.length s  }
+    ensures  { S.length result = S.length s }
+    ensures  { forall i. 0 <= i < ncols -> S.get result i = S.get s i + get m l i }
+    variant  { ncols }
+  = if ncols = 0 then s
+    else S.set (add_line m l (ncols - 1) s)
+               (ncols - 1) (S.get s (ncols - 1) + get m l (ncols - 1))
+
+  function sum_lines (m: matrix int) (l: list int) (s: S.seq int) : S.seq int
+  = match l with
+    | Nil -> s
+    | Cons i l ->
+      let s' = add_line m i m.columns s in
+      sum_lines m l s'
+    end
+
+  predicate all_ones (s: S.seq int)
+  = forall i. 0 <= i < S.length s -> S.get s i = 1
+
+  predicate solution (m: matrix int) (l: list int)
+  = let s = sum_lines m l (S.create m.columns (fun _ -> 0)) in
+    all_ones s
+end
+
+module ExactCoverSolve
+  use int.Int
+  use list.List
+  use list.Mem
+  use matrix.Matrix
+
+  type t = abstract {
+    m: matrix int;
+    mutable rcols: list int;   (* remaining columns *)
+    mutable srows: list int;   (* selected rows *)
+  }
+    invariant { forall x. mem x rcols -> 0 <= x < m.columns }
+    invariant { forall x. mem x srows -> 0 <= x < m.rows    }
+    (* invariant { forall c. 0 <= c < m.columns -> mem c rcols \/ mem c scols } *)
+    invariant { forall l c. valid_index m l c -> 0 <= get m l c <= 1 }
+  by { m = make 0 0 0; rcols = Nil; srows = Nil }
+
+  val hide (t: t) (l c: int) : unit
+    requires { valid_index t.m l c }
+    requires { get t.m l c = 1 }
+    writes   { t }
+    ensures  { t.m = old t.m /\ t.srows = old t.srows }
+    ensures  { forall c'. c <> c' ->
+                          get t.m l c' = 1 ->
+                          not (mem c' t.rcols) }
+    ensures  { get t.m l c = 1 }
+    ensures  { forall c'. mem c' (old t.rcols) ->
+                          get t.m l c' = 0 ->
+                          mem c' t.rcols }
+
+  val cover (t: t) (i: int) : unit
+    requires { 0 <= i < t.m.columns }
+    writes   { t }
+    ensures  { t.m = old t.m }
+    ensures  { t.srows = Cons i (old t.srows) }
+    ensures  { forall l c. get t.m l i = 1 ->
+                           get t.m l c = 1 ->
+                           not (mem c t.rcols) }
+    ensures  { forall l c. get t.m l i = 0 ->
+                           mem c (old t.rcols) ->
+                           mem c t.rcols }
+
+end
