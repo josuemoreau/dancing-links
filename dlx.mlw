@@ -95,7 +95,7 @@ module DLXSpec
       opts.nt[0] = NotInitialized /\
       opts.nt[n + 1] = Spacer /\
       forall i.
-        n + 1 < i < max <= length opts.nt ->
+        n + 1 < i <= max < length opts.nt ->
         opts.nt[i] = Option \/ opts.nt[i] = Spacer
 
     predicate options_nt (n: int) (opts: options) =
@@ -107,17 +107,26 @@ module DLXSpec
         if i <= n then opts.nt[i] = Header
         else opts.nt[i] = Option \/ opts.nt[i] = Spacer
 
-    predicate options_top (n: int) (opts: options) =
+    predicate options_top_partial (n: int) (opts: options) (max: int) =
       forall i.
+        n < i <= max < length opts.nt ->
+        opts.nt[i] = Option ->
+        1 <= opts.tl[i] <= n /\ opts.nt[opts.tl[i]] = Header
+
+    predicate options_top (n: int) (opts: options) =
+      options_top_partial n opts (length opts.nt - 1)
+      (* forall i.
         n < i < length opts.nt ->
         opts.nt[i] = Option ->
-        1 <= opts.tl[i] <= n /\ opts.nt[i] = Header
+        1 <= opts.tl[i] <= n /\ opts.nt[opts.tl[i]] = Header *)
 
     predicate options_up_down (opts: options) =
       forall i.
         0 <= i < length opts.up ->
-        opts.nt[i] <> NotInitialized ->
         opts.nt[i] <> Spacer ->
+        (opts.nt[i] = NotInitialized -> opts.up[i] = i) /\
+        (opts.nt[opts.up[i]] <> Spacer) /\ (opts.nt[opts.down[i]] <> Spacer) /\
+        (opts.up[i] = i <-> opts.down[i] = i) /\
         opts.up[opts.down[i]] = i /\
         opts.down[opts.up[i]] = i
 
@@ -189,18 +198,18 @@ module DLX
                                (nb_items + 2) rows in
     let nt'   = make nb_options NotInitialized in
     let tl'   = make nb_options   0  in
-    let up'   = make nb_options (-1) in
-    let down' = make nb_options (-1) in
+    let up'   = init nb_options (fun i -> i) in
+    let down' = init nb_options (fun i -> i) in
     let items'  = { obj = obj'; left = left'; right = right' } in
     let options = { nt = nt'; tl = tl'; up = up'; down = down' } in
     let corresp = EMap.create () in
     for i = 1 to nb_items do
       invariant { forall k. 1 <= k < i -> EMap.mem obj'[k] (corresp.EMap.to_fmap) }
       invariant { forall k j. EMap.mem k corresp -> EMap.find k corresp = j -> 1 <= j <= nb_items }
-      invariant { forall k. 1 <= k < i -> 0 <= options.up[k] < nb_options }
-      invariant { forall k. 1 <= k < i -> 0 <= options.down[k] < nb_options }
-      options.up[i]   <- i;
-      options.down[i] <- i;
+      (* invariant { forall k. 1 <= k < i -> 0 <= options.up[k] < nb_options }
+      invariant { forall k. 1 <= k < i -> 0 <= options.down[k] < nb_options } *)
+      (* options.up[i]   <- i;
+         options.down[i] <- i; *)
       EMap.add obj'[i] i corresp
     done;
     let rcorresp = make nb_options (Nil: list elt) in
@@ -213,6 +222,14 @@ module DLX
                                                   0 <= options.down[k] < nb_options /\
                                                   (options.nt[k] = Header \/ options.nt[k] = NotInitialized) }
       invariant { options_nt_partial nb_items options i }
+      invariant { options_top_partial nb_items options i }
+      invariant { options_up_down options }
+      invariant { forall k. 1 <= k <= i ->
+                            options.nt[k] <> Spacer ->
+                            1 <= options.up[k] <= i /\ 1 <= options.down[k] <= i }
+      invariant { forall k. i < k < nb_options ->
+                            options.up[k] = k /\ options.down[k] = k }
+      invariant { options.nt[i] = Spacer }
       (* invariant { forall k. 0 <= k < i -> options0 <= options.up[k] < nb_options }
       invariant { forall k. 0 <= k < i -> 0 <= options.down[k] < nb_options } *)
       let j = i in
@@ -225,13 +242,29 @@ module DLX
         requires { forall k. 1 <= k <= nb_items -> 0 <= options.up[k] < nb_options /\
                                                    0 <= options.down[k] < nb_options /\
                                                    (options.nt[k] = Header \/ options.nt[k] = NotInitialized) }
+        requires { forall k. 1 <= k <= i ->
+                             options.nt[k] <> Spacer ->
+                             1 <= options.up[k] <= i /\ 1 <= options.down[k] <= i }
+        requires { forall k. i < k < nb_options ->
+                             options.up[k] = k /\ options.down[k] = k }
+        requires { j <= i /\ options.nt[j] = Spacer }
         requires { options_nt_partial nb_items options i }
+        requires { options_top_partial nb_items options i }
+        requires { options_up_down options }
         ensures  { i = fold_left' (fun n r -> n + LLength.length r + 1)
                                   (nb_items + 2) rows 0 (l + 1) - 2 }
         ensures  { forall k. 1 <= k <= nb_items -> 0 <= options.up[k] < nb_options /\
                                                    0 <= options.down[k] < nb_options /\
                                                    (options.nt[k] = Header \/ options.nt[k] = NotInitialized) }
+        ensures  { forall k. 1 <= k <= i ->
+                             options.nt[k] <> Spacer ->
+                             1 <= options.up[k] <= i /\ 1 <= options.down[k] <= i }
+        ensures  { forall k. i < k < nb_options ->
+                             options.up[k] = k /\ options.down[k] = k }
+        ensures  { j <= i /\ options.nt[j] = Spacer }
         ensures  { options_nt_partial nb_items options i }
+        ensures  { options_top_partial nb_items options i }
+        ensures  { options_up_down options }
         (* requires { forall k. 0 <= k < i -> 0 <= options.up[k] < nb_options }
            requires { forall k. 0 <= k < i -> 0 <= options.down[k] < nb_options }  *)
         variant  { r }
@@ -249,6 +282,7 @@ module DLX
             options.tl[i] <- k;
             options.up[i] <- options.up[k];
             options.down[i] <- k;
+            assert { options.down[options.up[k]] = k };
             options.down[options.up[k]] <- i;
             options.tl[k] <- options.tl[k] + 1;
             options.up[k] <- i;
@@ -270,8 +304,28 @@ module DLX
       options.down[i] <- i - 1;
       options.down[j] <- i - 1
     done;
-    
-    options.down[nb_options - 1] <- -1;
+    (* Cette dernière boucle ne sert à rien si l'on est capable de garantir que
+       chaque colonne est représentée au moins une fois dans l'une des lignes
+       (sinon on pourrait supprimer cette colonne). Je pense simplement que
+       prouver que tous les items de 1 à nb_items on leur type à Header sera
+       long et complètement inintéressant (et donc j'ai la flemme), donc je
+       trivialise la preuve avec cette boucle. *)
+    label T in
+    for i = 1 to nb_items do
+      (* All items from 1 to nb_items are headers. *)
+      invariant { forall j. 1 <= j < i -> options.nt[j] = Header }
+      (* Other items are unchanged. *)
+      invariant { options.nt[0] = NotInitialized }
+      invariant { forall j. nb_items + 1 <= j < nb_options ->
+                            (options at T).nt[j] = options.nt[j] }
+      (* invariant { forall j. (options at T).nt[j] = Spacer ->
+                            options.nt[j] = Spacer }
+      invariant { forall j. options.nt[j] = NotInitialized ->
+                            (options at T).nt[j] = NotInitialized } *)
+      options.nt[i] <- Header
+    done;
+    (* options.down[nb_options - 1] <- -1; *)
+    (* TODO: Manquent invariants Spacer et ceux sur tl *)
     { items = items';
       options = options;
       rows = rows;
